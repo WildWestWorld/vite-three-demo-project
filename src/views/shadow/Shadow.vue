@@ -102,6 +102,15 @@ const render = () => {
   //   相当于无线循环render
   requestAnimationFrame(render);
 };
+
+//让渲染的页面随着窗体变化而变化
+window.addEventListener('resize', function () {
+  camera.value.aspect = window.innerWidth / window.innerHeight;
+  // 所以，执行camera.updateProjectionMatrix();的时候，threejs会重新计算相机对象的投影矩阵值。
+  camera.value.updateProjectionMatrix();
+  //调整页面的大小
+  renderer.value.setSize(window.innerWidth, window.innerHeight);
+});
 </script>
 
 <style scoped></style>

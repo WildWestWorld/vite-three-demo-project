@@ -7,11 +7,37 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 //引入调试器
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
+//引入物理属性
+import { OimoPhysics } from 'three/examples/jsm/physics/OimoPhysics';
 
-import { onMounted, reactive, ref, toRaw } from 'vue';
+import { nextTick, onMounted, reactive, ref, toRaw } from 'vue';
 // 变量区
-let white = new THREE.Color('white');
-let color = new THREE.Color();
+//白光
+let hesLight = new THREE.HemisphereLight(); //白色光
+//平行光
+let dirLight = new THREE.DirectionalLight();
+
+//地板
+let floor = new THREE.Mesh(
+  new THREE.BoxGeometry(10, 1, 10),
+  new THREE.ShadowMaterial({ color: 0x111111 })
+); //使用shadowMaterial时必须开启影子
+
+//物体
+let boxes = new THREE.InstancedMesh(
+  new THREE.BoxGeometry(0.1, 0.1, 0.1),
+  new THREE.MeshLambertMaterial(), //用于模拟木头，橡胶，镜面反射差的材质
+  100 //生成的个数
+);
+//球体
+let shperes;
+
+//定义物理
+let physics;
+
+//掉落开始的起始位置
+let fallPositon = new THREE.Vector3();
+
 // 场景
 const scene = ref(null);
 //方块/物体
@@ -29,14 +55,6 @@ const spotLightHelper = ref(null);
 //阴影
 const shadow = ref(null);
 
-//射线
-//初始化射线
-const rayCaster = new THREE.Raycaster();
-//初始化鼠标
-//设置mouse的初值，避免让他使用0,0的默认值，让一些小球直接就变色了
-//只要设置成画面以外的值就行了 例如 1,1 也就是最右下角
-const mouse = new THREE.Vector2(1, 1);
-
 //摄像机
 const camera = ref(null);
 //相机控制器
@@ -50,14 +68,14 @@ const renderer = ref(null);
 const axisHelp = ref(null);
 
 // 生命周期区
-onMounted(() => {
-  init();
+onMounted(async () => {
+  await init();
   render();
 });
 // 方法区
 
 //初始化
-const init = () => {
+const init = async () => {
   //初始化场景
   initScene();
 
@@ -68,29 +86,35 @@ const init = () => {
   initCamera();
 
   //初始化几何体
-  initCube();
+  //   initCube();
 
-  initCylinder();
+  //   initCylinder();
+
+  initMeshes();
+
+  //初始化多个几何体(后添)
 
   //初始化光线
-  initAmbientLight();
+  //   initAmbientLight();
+  //初始化白光(后添)
+  initLight();
 
   //初始化聚光灯
-  initSpotLight();
+  //   initSpotLight();
   //初始化聚光灯辅助（可注释）
-  //   initSpotLightHelper();
-
-  //初始化射线
-  //   initRayCaster();
+  // initSpotLightHelper();
 
   //初始化阴影
   initShadow();
+
+  //初始化物理引擎
+  await initPhysics();
 
   //初始化渲染器
   initRender();
 
   //初始化参数调试器GUI
-  initGUI();
+  //   initGUI();
 
   //初始化控制器
   initController();
@@ -102,6 +126,7 @@ const initScene = () => {
   //// 1.创建scene以及物体
   //   创建场景
   scene.value = new THREE.Scene();
+  scene.value.background = new THREE.Color(0x888888);
 };
 
 //初始化坐标轴
@@ -133,10 +158,10 @@ const initCamera = () => {
   //   toRaw 将响应式对象改为普通对象，不用就报错，说Positon无法改变
 
   //   若不设置看不到z轴
-  toRaw(camera.value).position.x = -50;
+  toRaw(camera.value).position.x = 2;
 
-  toRaw(camera.value).position.y = 120;
-  toRaw(camera.value).position.z = 200;
+  toRaw(camera.value).position.y = 2;
+  toRaw(camera.value).position.z = 2;
 
   camera.value.lookAt(0, 0, 0);
 };
@@ -150,62 +175,12 @@ const initCube = () => {
 
   // PlaneGeometry 平面
   // PlaneGeometry(宽，高)
-  //   let geometry = new THREE.PlaneGeometry(80, 80);
-
-  //创建正二十面体
-
-  //   IcosahedronBufferGeometry(半径,大于0时会变成球，默认为0，越大球越圆)
-  // radius — 二十面体的半径，默认为1。
-  // detail — 默认值为0。将这个值设为一个大于0的数将会为它增加一些顶点，使其不再是一个二十面体。当这个值大于1的时候，实际上它将变成一个球体
-
-  let geometry = new THREE.IcosahedronBufferGeometry(0.5, 3);
-
+  let geometry = new THREE.PlaneGeometry(80, 80);
   //   几何体的材质
-  let meterial = new THREE.MeshPhongMaterial({ color: 'white' });
+  let meterial = new THREE.MeshPhongMaterial({ color: 'grey' });
 
   //  正式创建几何体,Mesh(几何体，材质)
-  //   cube.value = new THREE.Mesh(geometry, meterial);
-
-  // 单面小球的数量
-  let amount = 10;
-  //开三次方，意味着三个维度
-  let count = Math.pow(amount, 3);
-  //THREE.IntancedMesh(几何体，材质，产生几何体的数量)  创建一堆的几何体
-  cube.value = new THREE.InstancedMesh(geometry, meterial, count);
-
-  let index = 0;
-  //偏移的常量
-  const offset = (amount - 1) / 2; //(amount -1)/2 = (10-1)/2 =4.5
-  //转换矩阵
-  const matrix = new THREE.Matrix4();
-
-  //若是要对每一个小球进行设置，则需要用for循环
-  //   因为是三个面 所以要循环3次
-  for (let i = 0; i < amount; i++) {
-    for (let j = 0; j < amount; j++) {
-      for (let k = 0; k < amount; k++) {
-        //设置转换矩阵的位置
-        //这里需要特别说明下 这里是设置每个小球的位置， 取值范围就是(4.5,-4.5(4.5-9))
-        // 为什么是9，因为 i是小于amount(10) 的
-        //设置好matix 然后再赋值给小球
-        matrix.setPosition(offset - i, offset - j, offset - k);
-        cube.value.setMatrixAt(index, matrix);
-        //再给每个小球设置color
-        //因为我们需要Hover时 改变小球颜色，所以我们的颜色要单独抽离出来
-        //使用Random的方法产生随机颜色
-
-        // cube.value.setColorAt(
-        //   index,
-        //   new THREE.Color().setHex(Math.random() * 0xfffffff)
-        // );
-
-        //白色
-        cube.value.setColorAt(index, white);
-
-        index = index + 1;
-      }
-    }
-  }
+  cube.value = new THREE.Mesh(geometry, meterial);
 
   //旋转 PlaneGeometry，让他围绕x轴转动 ， Math.PI/2 = 90度 因为背面我们是看不到的所以用负的
   cube.value.rotation.x = -Math.PI / 2;
@@ -238,6 +213,62 @@ const initCylinder = () => {
   scene.value.add(cylinder.value);
 };
 
+//初始化多个物体
+const initMeshes = () => {
+  //设置地板Floor
+  floor = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 1, 10),
+    new THREE.ShadowMaterial({ color: 0x111111 })
+  ); //使用shadowMaterial时必须开启影子
+  floor.position.set(0, -1, 0);
+
+  scene.value.add(floor);
+
+  //提高box的动画流畅度
+  boxes.instanceMatrix.setUsage(THREE.DynamicDrawUsage); //更新每一帧
+
+  //box在上面初始化过了
+  //现在需要弄个四维的矩阵来排列物体
+  const matrix = new THREE.Matrix4();
+  const color = new THREE.Color();
+  for (let i = 0; i < boxes.count; i++) {
+    matrix.setPosition(0, 0, 0);
+    matrix.setPosition(
+      Math.random() - 0.5, //取值范围:-0.5~0.5
+      Math.random() * 2, //取值范围:0-2
+      Math.random() - 0.5
+    ); //取值范围:0.5~-0.5;
+    boxes.setMatrixAt(i, matrix);
+    boxes.setColorAt(i, color.setHex(Math.random() * 0xffffff));
+  }
+  scene.value.add(boxes);
+
+  //   生成球体
+  //初始化球体
+  shperes = new THREE.InstancedMesh(
+    new THREE.IcosahedronBufferGeometry(0.075, 3),
+    new THREE.MeshLambertMaterial(), //用于木头材质的物体
+    100
+  );
+
+  //提高shperes的动画流畅度
+  shperes.instanceMatrix.setUsage(THREE.DynamicDrawUsage); //更新每一帧
+
+  //现在需要弄个四维的矩阵来排列物体
+
+  for (let i = 0; i < shperes.count; i++) {
+    matrix.setPosition(0, 0, 0);
+    matrix.setPosition(
+      Math.random() - 0.5, //取值范围:-0.5~0.5
+      Math.random() * 2, //取值范围:0-2
+      Math.random() - 0.5
+    ); //取值范围:0.5~-0.5;
+    shperes.setMatrixAt(i, matrix);
+    shperes.setColorAt(i, color.setHex(Math.random() * 0xffffff));
+  }
+  scene.value.add(shperes);
+};
+
 //初始化聚光灯
 const initSpotLight = () => {
   //初始化聚光灯
@@ -264,22 +295,38 @@ const initAmbientLight = () => {
   ambientLight.value = new THREE.AmbientLight(0xffffff, 0.2);
   scene.value.add(ambientLight.value);
 };
+//初始化白光
+const initLight = () => {
+  //环境光
+  //白光添加的变量已经在最上面添加过了
+  hesLight.intensity = 0.3;
+  //场景添加白光
+  scene.value.add(hesLight);
+
+  //平行光
+  dirLight = new THREE.DirectionalLight();
+  // 我们希望光能够从右边打过来
+  dirLight.position.set(5, 5, -5);
+  scene.value.add(dirLight);
+};
 
 //初始化阴影
 const initShadow = () => {
   //开启圆柱体的阴影
-  cylinder.value.castShadow = true;
+  //   cylinder.value.castShadow = true;
   //开启平面的 接收阴影
-  cube.value.receiveShadow = true;
+  //   cube.value.receiveShadow = true;
   //开启灯光的阴影
-  spotLight.value.castShadow = true;
-};
+  //   spotLight.value.castShadow = true;
+  dirLight.castShadow = true;
 
-// //初始化 射线
-// const initRayCaster = () => {
-//   //射线投影
-//   rayCaster.value = new THREE.Raycaster();
-// };
+  //提高阴影的质感
+  dirLight.shadow.camera.zoom = 2;
+
+  floor.receiveShadow = true;
+  boxes.castShadow = true;
+  boxes.receiveShadow = true;
+};
 
 //初始化渲染器
 const initRender = () => {
@@ -296,6 +343,9 @@ const initRender = () => {
   // 设置渲染的大小
   renderer.value.setSize(window.innerWidth, window.innerHeight);
 
+  //改变渲染器的输入编码方式 ，用了THREE.sRGBEncoding 颜色就回偏亮些，更好看些
+  renderer.value.outputEncoding = THREE.sRGBEncoding;
+
   //   将渲染好的数据，放到document里面
   // renderer.value.domElement=我们渲染出来的数据(是一个canvas)
   //   document.body.appendChild(renderer.value.domElement);
@@ -310,6 +360,8 @@ const initController = () => {
     camera.value,
     renderer.value.domElement
   );
+  cameraController.value.target.y = 1;
+  cameraController.value.update();
 };
 
 //初始化图形参数控制器
@@ -361,6 +413,16 @@ const initGUI = () => {
     .step(1)
     .onChange(render);
 };
+// 初始化物理引擎，默认的物理引擎的调用其实是异步方法
+const initPhysics = async () => {
+  physics = await OimoPhysics();
+  //哪个物体需要加入物理引擎 我们用addMesh（物体，加速度）方法就行 如果加了加速度就会往下落
+  physics.addMesh(floor);
+  //盒子
+  physics.addMesh(boxes, 1);
+  //球体
+  physics.addMesh(shperes, 1);
+};
 
 // 渲染
 const render = () => {
@@ -372,30 +434,13 @@ const render = () => {
   //requestAnimationFrame来自浏览器 就是一旦有空闲就会再次调用里面放的函数
   //   相当于无线循环render
 
-  //射线
-  rayCaster.setFromCamera(mouse, toRaw(camera.value));
-  console.log(mouse);
-
-  //射线与物体交集 返回值是相交的物体
-  //返回值是一个数组
-  const intersection = rayCaster.intersectObject(cube.value);
-  if (intersection.length > 0) {
-    //射线(intersection[0]) 相交的第一个物体
-    const instanceId = intersection[0].instanceId;
-
-    //获取通过对应的id 获取当前点击到小球的颜色，并让color做为临时变量进行存储
-    cube.value.getColorAt(instanceId, color);
-    //只有这个颜色是白色时我们才去给他去赋值
-    if (color.equals(white)) {
-      cube.value.setColorAt(instanceId, color.setHex(Math.random() * 0xffffff));
-
-      //改变颜色之后，要给对应的实例一个通知
-      cube.value.instanceColor.needsUpdate = true;
-    }
-  }
-
-  console.log(intersection.length);
-
+  //需要nextTick 因为此时
+  //随机的索引
+  let randomIndex = Math.floor(Math.random() * boxes.count);
+  fallPositon.set(0, Math.random() + 1, 0);
+  //随机设置Boxes里面的物体Index，把他设置倒fallPostion 的位置，这样他就能回到对应的位置
+  physics.setMeshPosition(boxes, fallPositon, randomIndex);
+  physics.setMeshPosition(shperes, fallPositon, randomIndex);
   requestAnimationFrame(render);
 };
 
@@ -406,15 +451,6 @@ window.addEventListener('resize', function () {
   camera.value.updateProjectionMatrix();
   //调整页面的大小
   renderer.value.setSize(window.innerWidth, window.innerHeight);
-});
-
-//监听鼠标
-document.addEventListener('mousemove', function (event) {
-  // 当前鼠标的位置x / 页面的宽度 得到 当前位置的在页面上的百分比 取值范围是[0,1] 乘2取值范围就是[0,2] 减一取值范围就是[-1,1]
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1; /// 取值范围-1 ~1
-
-  //因为y是从上到下的，所以得取个负号，才能让他从 -1 ~ 1
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1; /// 取值范围 -1~1
 });
 </script>
 
