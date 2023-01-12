@@ -5,6 +5,8 @@
 <script setup>
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
+
 //引入调试器
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
 
@@ -17,13 +19,6 @@ let dirLight;
 let ground;
 //环形结
 let tourusKnot;
-
-// 短视频，用于动画
-let clip;
-// 动画混合器
-let mixer;
-
-let clock = new THREE.Clock();
 
 // 场景
 const scene = ref(null);
@@ -90,11 +85,6 @@ const init = () => {
   //初始化阴影
   //   initShadow();
 
-  //初始化动画
-  initAnimation();
-  //开启动画
-  enabledAnimation();
-
   //初始化渲染器
   initRender();
 
@@ -118,7 +108,7 @@ const initScene = () => {
 //初始化坐标轴
 const initAxis = () => {
   // 创建坐标轴 里面的10 是坐标轴的长度
-  axisHelp.value = new THREE.AxesHelper(10);
+  axisHelp.value = new THREE.AxesHelper(100);
 
   //   添加坐标轴
   //   需要特别说明的是横着的红色是x轴，竖着的是绿色的是y轴(!!!)，而朝向我们的是z轴
@@ -144,10 +134,10 @@ const initCamera = () => {
   //   toRaw 将响应式对象改为普通对象，不用就报错，说Positon无法改变
 
   //   若不设置看不到z轴
-  toRaw(camera.value).position.x = 10;
+  toRaw(camera.value).position.x = 0;
 
-  toRaw(camera.value).position.y = 30;
-  toRaw(camera.value).position.z = 50;
+  toRaw(camera.value).position.y = 0;
+  toRaw(camera.value).position.z = 500;
 
   //   camera.value.lookAt(0, 0, 0);
 };
@@ -158,24 +148,61 @@ const initCube = () => {
   // 创建几何体，BoxGeometry(长，宽，高)
   //   BoxGeometry 立方体
   //   let geometry = new THREE.BoxGeometry(1, 1, 1);
-
   // PlaneGeometry 平面
   // PlaneGeometry(宽，高)
-  let geometry = new THREE.BoxGeometry(2, 2, 2);
-  //   几何体的材质
-  let meterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-
-  //  正式创建几何体,Mesh(几何体，材质)
-  cube.value = new THREE.Mesh(geometry, meterial);
-
+  // let geometry = new THREE.BoxGeometry(2, 2, 2);
+  // //   几何体的材质
+  // let meterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+  // //  正式创建几何体,Mesh(几何体，材质)
+  // cube.value = new THREE.Mesh(geometry, meterial);
   //旋转 PlaneGeometry，让他围绕x轴转动 ， Math.PI/2 = 90度 因为背面我们是看不到的所以用负的
   //   cube.value.rotation.x = -Math.PI / 2;
-
   //将平面下沉，让他不在原点上
   //   cube.value.position.set(0, -1, 0);
-
   //  将创建好的物体放到我们创建的场景里面
-  scene.value.add(cube.value);
+  //   scene.value.add(cube.value);
+
+  //   1.环形
+  //   设置卷曲的路径
+  const closedSpline = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-60, -100, 60), //左下
+    new THREE.Vector3(-60, 20, 60), //左中
+    new THREE.Vector3(-60, 120, 60), //左上
+    new THREE.Vector3(60, 20, -60), //右中
+    new THREE.Vector3(60, -100, -60), //右下
+  ]);
+
+  //   卷曲的类型
+  closedSpline.curveType = 'catmullrom';
+  //是否是闭合图形
+  closedSpline.closed = true;
+
+  //   卷曲的总设置
+  const extrudeSettings = {
+    step: 100, //由多少端直线构成，数越大越光滑，占用资源越多
+    bevelEnabled: false, //是否给这个形状加斜面，默认加斜面。
+    extrudePath: closedSpline, //卷曲路径,形状会跟着这个路径来变化
+  };
+
+  //被卷曲物体的形状
+  const radius = 20; //圆的半径
+  const pts1 = []; //形状数组
+  const count = 3;
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * 2 * Math.PI;
+
+    pts1.push(
+      new THREE.Vector2(radius * Math.cos(angle), radius * Math.sin(angle))
+    );
+  }
+  console.log(pts1);
+
+  const shape1 = new THREE.Shape(pts1);
+  console.log(shape1);
+  const geometry1 = new THREE.ExtrudeGeometry(shape1, extrudeSettings);
+  const material1 = new THREE.MeshLambertMaterial({ color: 0xb00000 }); //用于模拟非金属
+  const mesh1 = new THREE.Mesh(geometry1, material1);
+  scene.value.add(mesh1);
 };
 //初始化圆柱体
 const initCylinder = () => {
@@ -208,6 +235,7 @@ const initSpotLight = () => {
   spotLight.value.angle = Math.PI / 6;
   //penumbra属性表示照射面光影衰减百分比，取值在0和1之间， 默认值为 0.0
   spotLight.value.penumbra = 0.2;
+
   scene.value.add(spotLight.value);
 };
 //初始化聚光灯调试器
@@ -227,12 +255,14 @@ const initAmbientLight = () => {
 };
 const initLight = () => {
   //添加环境光
-  ambientLight.value = new THREE.AmbientLight(0xffffff, 0.2);
+  ambientLight.value = new THREE.AmbientLight(0x222222, 1);
   scene.value.add(ambientLight.value);
 
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-  dirLight.position.set(10, 10, 5);
-  scene.value.add(dirLight);
+  const light = new THREE.PointLight(0xffffff);
+  light.position.copy(camera.value.position);
+  //   const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+  //   dirLight.position.set(10, 10, 5);
+  scene.value.add(light);
 };
 
 //初始化阴影
@@ -260,6 +290,8 @@ const initRender = () => {
   // 设置渲染的大小
   renderer.value.setSize(window.innerWidth, window.innerHeight);
 
+  renderer.value.outputEncoding = THREE.sRGBEncoding;
+
   //   将渲染好的数据，放到document里面
   // renderer.value.domElement=我们渲染出来的数据(是一个canvas)
   //   document.body.appendChild(renderer.value.domElement);
@@ -270,10 +302,13 @@ const initRender = () => {
 //初始化控制器
 const initController = () => {
   // 4.控制器
-  cameraController.value = new OrbitControls(
+  cameraController.value = new TrackballControls(
     camera.value,
     renderer.value.domElement
   );
+
+  cameraController.value.minDistance = 200;
+  cameraController.value.maxDistance = 500;
 
   //设置控制器变换的基础点
   cameraController.value.target.set(0, 1, 0);
@@ -328,83 +363,6 @@ const initGUI = () => {
     .step(1)
     .onChange(render);
 };
-//初始化动画
-const initAnimation = () => {
-  //位置动画
-  //位置
-  // THREE.VectorKeyframeTrack（动画名，帧数组，每三个数对应一帧，因为是三维的）
-  const positionKF = new THREE.VectorKeyframeTrack(
-    'box.position',
-    [0, 1, 2, 3],
-    [0, 0, 0, 10, 10, 0, 10, 0, 0, 0, 0, 0]
-  );
-
-  //缩放
-  const scaleKF = new THREE.VectorKeyframeTrack(
-    'box.scale',
-    [0, 1, 2, 3],
-    [1, 1, 1, 2, 2, 2, 0.5, 2, 2, 1, 1, 1]
-  );
-
-  //旋转
-  //   定义一个旋转的主轴
-  const xAxis = new THREE.Vector3(1, 0, 0);
-  //   Quaternion().setFromAxisAngle(旋转的轴,轴最初的角度)
-  const qInital = new THREE.Quaternion().setFromAxisAngle(xAxis, 0);
-  const qFinal = new THREE.Quaternion().setFromAxisAngle(xAxis, Math.PI);
-
-  const quaternionKF = new THREE.QuaternionKeyframeTrack(
-    'box.quaternion',
-    [0, 1, 2, 3],
-    [
-      qInital.x,
-      qInital.y,
-      qInital.z,
-      qInital.w,
-      qFinal.x,
-      qFinal.y,
-      qFinal.z,
-      qFinal.w,
-      qInital.x,
-      qInital.y,
-      qInital.z,
-      qInital.w,
-      qFinal.x,
-      qFinal.y,
-      qFinal.z,
-      qFinal.w,
-    ]
-  );
-
-  //颜色
-  //这里末尾的三个向量代表的就是RGB的值
-  const colorKF = new THREE.ColorKeyframeTrack(
-    'box.material.color',
-    [0, 1, 2, 3],
-    [1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0]
-  );
-  //透明度
-  const opacityKF = new THREE.NumberKeyframeTrack('box.material.opacity',[0,1,2,3],[1,0,1,1])
-
-  // THREE.AnimationClip(短视频名,持续时间,帧)
-  clip = new THREE.AnimationClip('Action', 4, [
-    positionKF,
-    scaleKF,
-    quaternionKF,
-    colorKF,
-    opacityKF
-  ]);
-};
-//开启动画
-const enabledAnimation = () => {
-  // 混合器用于绑定动画物体
-  //THREE.AnimationMixer(物体)
-  mixer = new THREE.AnimationMixer(cube.value);
-  // 用于物体绑定动画  mixer.clipAciton(动画名)
-  const clipAciton = mixer.clipAction(clip);
-  //播放动画
-  clipAciton.play();
-};
 
 // 渲染
 const render = () => {
@@ -416,13 +374,9 @@ const render = () => {
   //requestAnimationFrame来自浏览器 就是一旦有空闲就会再次调用里面放的函数
   //   相当于无线循环render
 
+  cameraController.value.update();
+
   requestAnimationFrame(render);
-
-  const delta = clock.getDelta();
-
-  //实时更新mixer
-  mixer.update(delta);
-  //   console.log(mixer);
 };
 
 //让渲染的页面随着窗体变化而变化

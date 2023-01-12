@@ -146,24 +146,19 @@
     // 创建几何体，BoxGeometry(长，宽，高)
     //   BoxGeometry 立方体
     //   let geometry = new THREE.BoxGeometry(1, 1, 1);
-  
     // PlaneGeometry 平面
     // PlaneGeometry(宽，高)
-    let geometry = new THREE.BoxGeometry(2, 2, 2);
-    //   几何体的材质
-    let meterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-  
-    //  正式创建几何体,Mesh(几何体，材质)
-    cube.value = new THREE.Mesh(geometry, meterial);
-  
+    // let geometry = new THREE.BoxGeometry(2, 2, 2);
+    // //   几何体的材质
+    // let meterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+    // //  正式创建几何体,Mesh(几何体，材质)
+    // cube.value = new THREE.Mesh(geometry, meterial);
     //旋转 PlaneGeometry，让他围绕x轴转动 ， Math.PI/2 = 90度 因为背面我们是看不到的所以用负的
     //   cube.value.rotation.x = -Math.PI / 2;
-  
     //将平面下沉，让他不在原点上
-  //   cube.value.position.set(0, -1, 0);
-  
+    //   cube.value.position.set(0, -1, 0);
     //  将创建好的物体放到我们创建的场景里面
-    scene.value.add(cube.value);
+    //   scene.value.add(cube.value);
   };
   //初始化圆柱体
   const initCylinder = () => {
@@ -247,6 +242,8 @@
   
     // 设置渲染的大小
     renderer.value.setSize(window.innerWidth, window.innerHeight);
+  
+    renderer.value.outputEncoding = THREE.sRGBEncoding;
   
     //   将渲染好的数据，放到document里面
     // renderer.value.domElement=我们渲染出来的数据(是一个canvas)

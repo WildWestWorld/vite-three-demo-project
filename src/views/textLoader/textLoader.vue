@@ -8,6 +8,11 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 //引入调试器
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
 
+//字体加载器
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader';
+// 文本图形
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
+
 import { onMounted, reactive, ref, toRaw } from 'vue';
 // 变量区
 //白光
@@ -17,13 +22,6 @@ let dirLight;
 let ground;
 //环形结
 let tourusKnot;
-
-// 短视频，用于动画
-let clip;
-// 动画混合器
-let mixer;
-
-let clock = new THREE.Clock();
 
 // 场景
 const scene = ref(null);
@@ -90,11 +88,6 @@ const init = () => {
   //初始化阴影
   //   initShadow();
 
-  //初始化动画
-  initAnimation();
-  //开启动画
-  enabledAnimation();
-
   //初始化渲染器
   initRender();
 
@@ -113,6 +106,8 @@ const initScene = () => {
   scene.value = new THREE.Scene();
   //设置场景背景颜色
   scene.value.background = new THREE.Color(0x888888);
+
+  scene.value.fog = new THREE.Fog(0, 250, 1400);
 };
 
 //初始化坐标轴
@@ -158,24 +153,63 @@ const initCube = () => {
   // 创建几何体，BoxGeometry(长，宽，高)
   //   BoxGeometry 立方体
   //   let geometry = new THREE.BoxGeometry(1, 1, 1);
-
   // PlaneGeometry 平面
   // PlaneGeometry(宽，高)
-  let geometry = new THREE.BoxGeometry(2, 2, 2);
-  //   几何体的材质
-  let meterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-
-  //  正式创建几何体,Mesh(几何体，材质)
-  cube.value = new THREE.Mesh(geometry, meterial);
-
+  // let geometry = new THREE.BoxGeometry(2, 2, 2);
+  // //   几何体的材质
+  // let meterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+  // //  正式创建几何体,Mesh(几何体，材质)
+  // cube.value = new THREE.Mesh(geometry, meterial);
   //旋转 PlaneGeometry，让他围绕x轴转动 ， Math.PI/2 = 90度 因为背面我们是看不到的所以用负的
   //   cube.value.rotation.x = -Math.PI / 2;
-
   //将平面下沉，让他不在原点上
   //   cube.value.position.set(0, -1, 0);
-
   //  将创建好的物体放到我们创建的场景里面
-  scene.value.add(cube.value);
+  //   scene.value.add(cube.value);
+
+  const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(10000, 10000),
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      opacity: 0.5,
+      transparent: true,
+    })
+  );
+  plane.position.y = -10;
+  plane.rotateX = -Math.PI / 2;
+  scene.value.add(plane);
+
+  const materials = [
+    new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true }), //字体
+    new THREE.MeshPhongMaterial({ color: 0xffffff }), //side 字的边
+  ];
+  const loader = new FontLoader();
+  loader.load('./files/fonts/helvetiker_bold.typeface.json', (font) => {
+    console.log(font);
+    const geometry = new TextGeometry('Hello World', {
+      font: font,
+      size: 50, //字体大小
+      height: 30, //厚度
+      curveSegments: 20,
+      bevelThickness: 2,
+      bevelSize: 1.5,
+      bevelEnabled: true,
+    });
+    // 将物体放在坐标轴的中心
+    geometry.computeBoundingBox();
+
+    const xOffset =
+      (geometry.boundingBox.max.x - geometry.boundingBox.min.x) / 2;
+
+    const textMesh1 = new THREE.Mesh(geometry, materials);
+    textMesh1.position.set(-xOffset, 100, 0);
+    scene.value.add(textMesh1);
+
+    const textMesh2 = new THREE.Mesh(geometry, materials);
+    textMesh2.position.set(-xOffset, -100, 0);
+    textMesh2.rotation.x = Math.PI;
+    scene.value.add(textMesh2);
+  });
 };
 //初始化圆柱体
 const initCylinder = () => {
@@ -227,12 +261,18 @@ const initAmbientLight = () => {
 };
 const initLight = () => {
   //添加环境光
-  ambientLight.value = new THREE.AmbientLight(0xffffff, 0.2);
-  scene.value.add(ambientLight.value);
+  //   ambientLight.value = new THREE.AmbientLight(0xffffff, 0.2);
+  //   scene.value.add(ambientLight.value);
 
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.125);
   dirLight.position.set(10, 10, 5);
   scene.value.add(dirLight);
+
+  const pointLight = new THREE.PointLight(0xffffff, 1.5);
+  pointLight.position.set(0, 100, 90);
+  scene.value.add(pointLight);
+
+  pointLight.color.setHSL(Math.random(), 1, 0.5);
 };
 
 //初始化阴影
@@ -259,6 +299,8 @@ const initRender = () => {
 
   // 设置渲染的大小
   renderer.value.setSize(window.innerWidth, window.innerHeight);
+
+  renderer.value.outputEncoding = THREE.sRGBEncoding;
 
   //   将渲染好的数据，放到document里面
   // renderer.value.domElement=我们渲染出来的数据(是一个canvas)
@@ -328,83 +370,6 @@ const initGUI = () => {
     .step(1)
     .onChange(render);
 };
-//初始化动画
-const initAnimation = () => {
-  //位置动画
-  //位置
-  // THREE.VectorKeyframeTrack（动画名，帧数组，每三个数对应一帧，因为是三维的）
-  const positionKF = new THREE.VectorKeyframeTrack(
-    'box.position',
-    [0, 1, 2, 3],
-    [0, 0, 0, 10, 10, 0, 10, 0, 0, 0, 0, 0]
-  );
-
-  //缩放
-  const scaleKF = new THREE.VectorKeyframeTrack(
-    'box.scale',
-    [0, 1, 2, 3],
-    [1, 1, 1, 2, 2, 2, 0.5, 2, 2, 1, 1, 1]
-  );
-
-  //旋转
-  //   定义一个旋转的主轴
-  const xAxis = new THREE.Vector3(1, 0, 0);
-  //   Quaternion().setFromAxisAngle(旋转的轴,轴最初的角度)
-  const qInital = new THREE.Quaternion().setFromAxisAngle(xAxis, 0);
-  const qFinal = new THREE.Quaternion().setFromAxisAngle(xAxis, Math.PI);
-
-  const quaternionKF = new THREE.QuaternionKeyframeTrack(
-    'box.quaternion',
-    [0, 1, 2, 3],
-    [
-      qInital.x,
-      qInital.y,
-      qInital.z,
-      qInital.w,
-      qFinal.x,
-      qFinal.y,
-      qFinal.z,
-      qFinal.w,
-      qInital.x,
-      qInital.y,
-      qInital.z,
-      qInital.w,
-      qFinal.x,
-      qFinal.y,
-      qFinal.z,
-      qFinal.w,
-    ]
-  );
-
-  //颜色
-  //这里末尾的三个向量代表的就是RGB的值
-  const colorKF = new THREE.ColorKeyframeTrack(
-    'box.material.color',
-    [0, 1, 2, 3],
-    [1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0]
-  );
-  //透明度
-  const opacityKF = new THREE.NumberKeyframeTrack('box.material.opacity',[0,1,2,3],[1,0,1,1])
-
-  // THREE.AnimationClip(短视频名,持续时间,帧)
-  clip = new THREE.AnimationClip('Action', 4, [
-    positionKF,
-    scaleKF,
-    quaternionKF,
-    colorKF,
-    opacityKF
-  ]);
-};
-//开启动画
-const enabledAnimation = () => {
-  // 混合器用于绑定动画物体
-  //THREE.AnimationMixer(物体)
-  mixer = new THREE.AnimationMixer(cube.value);
-  // 用于物体绑定动画  mixer.clipAciton(动画名)
-  const clipAciton = mixer.clipAction(clip);
-  //播放动画
-  clipAciton.play();
-};
 
 // 渲染
 const render = () => {
@@ -417,12 +382,6 @@ const render = () => {
   //   相当于无线循环render
 
   requestAnimationFrame(render);
-
-  const delta = clock.getDelta();
-
-  //实时更新mixer
-  mixer.update(delta);
-  //   console.log(mixer);
 };
 
 //让渲染的页面随着窗体变化而变化

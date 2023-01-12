@@ -18,12 +18,7 @@ let ground;
 //环形结
 let tourusKnot;
 
-// 短视频，用于动画
-let clip;
-// 动画混合器
-let mixer;
-
-let clock = new THREE.Clock();
+let material;
 
 // 场景
 const scene = ref(null);
@@ -88,13 +83,10 @@ const init = () => {
   //   initSpotLightHelper();
 
   //初始化阴影
-  //   initShadow();
+  initShadow();
 
-  //初始化动画
-  initAnimation();
-  //开启动画
-  enabledAnimation();
-
+  //初始化裁剪
+  initClipper();
   //初始化渲染器
   initRender();
 
@@ -144,10 +136,10 @@ const initCamera = () => {
   //   toRaw 将响应式对象改为普通对象，不用就报错，说Positon无法改变
 
   //   若不设置看不到z轴
-  toRaw(camera.value).position.x = 10;
+  toRaw(camera.value).position.x = 0;
 
-  toRaw(camera.value).position.y = 30;
-  toRaw(camera.value).position.z = 50;
+  toRaw(camera.value).position.y = 0;
+  toRaw(camera.value).position.z = 4;
 
   //   camera.value.lookAt(0, 0, 0);
 };
@@ -158,24 +150,32 @@ const initCube = () => {
   // 创建几何体，BoxGeometry(长，宽，高)
   //   BoxGeometry 立方体
   //   let geometry = new THREE.BoxGeometry(1, 1, 1);
-
   // PlaneGeometry 平面
   // PlaneGeometry(宽，高)
-  let geometry = new THREE.BoxGeometry(2, 2, 2);
-  //   几何体的材质
-  let meterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-
-  //  正式创建几何体,Mesh(几何体，材质)
-  cube.value = new THREE.Mesh(geometry, meterial);
-
+  // let geometry = new THREE.BoxGeometry(2, 2, 2);
+  // //   几何体的材质
+  // let meterial = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+  // //  正式创建几何体,Mesh(几何体，材质)
+  // cube.value = new THREE.Mesh(geometry, meterial);
   //旋转 PlaneGeometry，让他围绕x轴转动 ， Math.PI/2 = 90度 因为背面我们是看不到的所以用负的
   //   cube.value.rotation.x = -Math.PI / 2;
-
   //将平面下沉，让他不在原点上
   //   cube.value.position.set(0, -1, 0);
-
   //  将创建好的物体放到我们创建的场景里面
-  scene.value.add(cube.value);
+  //   scene.value.add(cube.value);
+
+  ground = new THREE.Mesh(
+    new THREE.PlaneBufferGeometry(9, 9, 1, 1),
+    new THREE.MeshPhongMaterial({ color: 0xa0adaf, shininess: 150 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -1;
+  scene.value.add(ground);
+
+  material = new THREE.MeshPhongMaterial({ color: 0x80ee10, shininess: 100 });
+  const geometry = new THREE.TorusKnotBufferGeometry(0.4, 0.08, 95, 20);
+  tourusKnot = new THREE.Mesh(geometry, material);
+  scene.value.add(tourusKnot);
 };
 //初始化圆柱体
 const initCylinder = () => {
@@ -230,19 +230,47 @@ const initLight = () => {
   ambientLight.value = new THREE.AmbientLight(0xffffff, 0.2);
   scene.value.add(ambientLight.value);
 
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-  dirLight.position.set(10, 10, 5);
+  spotLight.value = new THREE.SpotLight(0xffffff);
+  spotLight.value.angle = Math.PI / 5;
+  spotLight.value.penumbra = 0.3;
+  spotLight.value.position.set(2, 3, 3);
+  scene.value.add(spotLight.value);
+
+  dirLight = new THREE.DirectionalLight(0xffffff, 1);
+  dirLight.position.set(0, 3, 0);
   scene.value.add(dirLight);
 };
 
 //初始化阴影
 const initShadow = () => {
   //开启圆柱体的阴影
-  cylinder.value.castShadow = true;
-  //开启平面的 接收阴影
-  cube.value.receiveShadow = true;
-  //开启灯光的阴影
+  //   cylinder.value.castShadow = true;
+  //   //开启平面的 接收阴影
+  //   cube.value.receiveShadow = true;
+  //   //开启灯光的阴影
+  //   spotLight.value.castShadow = true;
+
   spotLight.value.castShadow = true;
+  dirLight.castShadow = true;
+
+  tourusKnot.castShadow = true;
+  ground.receiveShadow = true;
+};
+
+//初始化裁剪
+const initClipper = () => {
+  const plane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0.2);
+
+  const plane1 = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0.2);
+
+  const plane2 = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0.2);
+
+  //局部裁剪
+  //   material.clippingPlanes = [plane, plane1, plane2];
+  //解决裁剪后整体空洞的问题
+  material.side = THREE.DoubleSide;
+  //解决裁剪后阴影未被裁剪
+  material.clipShadows = true;
 };
 
 //初始化渲染器
@@ -254,11 +282,23 @@ const initRender = () => {
   //开启渲染器中的阴影渲染
   renderer.value.shadowMap.enabled = true;
 
+  //开启渲染器中的裁剪
+  renderer.value.localClippingEnabled = true;
+
+  const plane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0.2);
+
+  const plane1 = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0.2);
+
+  //全局裁剪
+  renderer.value.clippingPlanes = [plane];
+
   //设置像素比例，这样可以让他看起来更适合屏幕
   renderer.value.setPixelRatio(window.devicePixelRatio);
 
   // 设置渲染的大小
   renderer.value.setSize(window.innerWidth, window.innerHeight);
+
+  renderer.value.outputEncoding = THREE.sRGBEncoding;
 
   //   将渲染好的数据，放到document里面
   // renderer.value.domElement=我们渲染出来的数据(是一个canvas)
@@ -328,83 +368,6 @@ const initGUI = () => {
     .step(1)
     .onChange(render);
 };
-//初始化动画
-const initAnimation = () => {
-  //位置动画
-  //位置
-  // THREE.VectorKeyframeTrack（动画名，帧数组，每三个数对应一帧，因为是三维的）
-  const positionKF = new THREE.VectorKeyframeTrack(
-    'box.position',
-    [0, 1, 2, 3],
-    [0, 0, 0, 10, 10, 0, 10, 0, 0, 0, 0, 0]
-  );
-
-  //缩放
-  const scaleKF = new THREE.VectorKeyframeTrack(
-    'box.scale',
-    [0, 1, 2, 3],
-    [1, 1, 1, 2, 2, 2, 0.5, 2, 2, 1, 1, 1]
-  );
-
-  //旋转
-  //   定义一个旋转的主轴
-  const xAxis = new THREE.Vector3(1, 0, 0);
-  //   Quaternion().setFromAxisAngle(旋转的轴,轴最初的角度)
-  const qInital = new THREE.Quaternion().setFromAxisAngle(xAxis, 0);
-  const qFinal = new THREE.Quaternion().setFromAxisAngle(xAxis, Math.PI);
-
-  const quaternionKF = new THREE.QuaternionKeyframeTrack(
-    'box.quaternion',
-    [0, 1, 2, 3],
-    [
-      qInital.x,
-      qInital.y,
-      qInital.z,
-      qInital.w,
-      qFinal.x,
-      qFinal.y,
-      qFinal.z,
-      qFinal.w,
-      qInital.x,
-      qInital.y,
-      qInital.z,
-      qInital.w,
-      qFinal.x,
-      qFinal.y,
-      qFinal.z,
-      qFinal.w,
-    ]
-  );
-
-  //颜色
-  //这里末尾的三个向量代表的就是RGB的值
-  const colorKF = new THREE.ColorKeyframeTrack(
-    'box.material.color',
-    [0, 1, 2, 3],
-    [1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0]
-  );
-  //透明度
-  const opacityKF = new THREE.NumberKeyframeTrack('box.material.opacity',[0,1,2,3],[1,0,1,1])
-
-  // THREE.AnimationClip(短视频名,持续时间,帧)
-  clip = new THREE.AnimationClip('Action', 4, [
-    positionKF,
-    scaleKF,
-    quaternionKF,
-    colorKF,
-    opacityKF
-  ]);
-};
-//开启动画
-const enabledAnimation = () => {
-  // 混合器用于绑定动画物体
-  //THREE.AnimationMixer(物体)
-  mixer = new THREE.AnimationMixer(cube.value);
-  // 用于物体绑定动画  mixer.clipAciton(动画名)
-  const clipAciton = mixer.clipAction(clip);
-  //播放动画
-  clipAciton.play();
-};
 
 // 渲染
 const render = () => {
@@ -417,12 +380,6 @@ const render = () => {
   //   相当于无线循环render
 
   requestAnimationFrame(render);
-
-  const delta = clock.getDelta();
-
-  //实时更新mixer
-  mixer.update(delta);
-  //   console.log(mixer);
 };
 
 //让渲染的页面随着窗体变化而变化

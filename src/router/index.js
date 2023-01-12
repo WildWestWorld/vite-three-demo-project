@@ -36,6 +36,39 @@ const routes = [
         path: '/animation',
         name: 'animation',
         component: () => import("@/views/animation/Animation.vue")
+    },
+    {
+        path: '/aniSoldier',
+        name: 'aniSoldier',
+        component: () => import("@/views/animation/aniSoldier.vue")
+    }, {
+        path: '/littleTokyo',
+        name: 'littleTokyo',
+        component: () => import("@/views/littleTokyo/LittleTokyo.vue")
+    }, {
+        path: '/clipping',
+        name: 'clipping',
+        component: () => import("@/views/clipping/clipping.vue")
+    }, {
+        path: '/skybox',
+        name: 'skybox',
+        component: () => import("@/views/skybox/Skybox.vue")
+    }, {
+        path: '/pdbLoader',
+        name: 'pdbLoader',
+        component: () => import("@/views/pdbLoader/PdbLoader.vue")
+    }, {
+        path: '/extrude',
+        name: 'extrude',
+        component: () => import("@/views/extrude/Extrude.vue")
+    }, {
+        path: '/textLoader',
+        name: 'textLoader',
+        component: () => import("@/views/textLoader/textLoader.vue")
+    },{
+        path: '/texture',
+        name: 'texture',
+        component: () => import("@/views/texture/texture.vue")
     }
 
 ];
