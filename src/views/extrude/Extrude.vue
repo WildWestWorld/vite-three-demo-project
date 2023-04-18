@@ -366,6 +366,8 @@ const initGUI = () => {
 
 // 渲染
 const render = () => {
+  cameraController.value.update();
+
   // render(场景，相机)
   toRaw(renderer.value).render(toRaw(scene.value), toRaw(camera.value));
   //   创建的cube进行旋转
@@ -373,8 +375,6 @@ const render = () => {
 
   //requestAnimationFrame来自浏览器 就是一旦有空闲就会再次调用里面放的函数
   //   相当于无线循环render
-
-  cameraController.value.update();
 
   requestAnimationFrame(render);
 };
