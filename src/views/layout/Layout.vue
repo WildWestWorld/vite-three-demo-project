@@ -8,6 +8,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 //引入调试器
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
 
+// 性能监视器
+import Stats from 'three/examples/jsm/libs/stats.module';
+
 import { onMounted, reactive, ref, toRaw } from 'vue';
 // 变量区
 //白光
@@ -17,6 +20,9 @@ let dirLight;
 let ground;
 //环形结
 let tourusKnot;
+
+// 性能监视器
+let stats;
 
 // 场景
 const scene = ref(null);
@@ -89,8 +95,22 @@ const init = () => {
   //初始化参数调试器GUI
   //   initGUI();
 
+  //   初始化性能监视器
+  initStats();
+
   //初始化控制器
   initController();
+};
+
+const initStats = () => {
+  stats = Stats();
+  const statsDom = stats.domElement;
+  console.log(statsDom);
+  statsDom.style.position = 'fixed';
+  statsDom.style.top = '0';
+  statsDom.style.right = '5px';
+  statsDom.style.left = 'unset';
+  document.body.appendChild(statsDom);
 };
 
 //初始化的子函数
@@ -321,6 +341,8 @@ const render = () => {
 
   //requestAnimationFrame来自浏览器 就是一旦有空闲就会再次调用里面放的函数
   //   相当于无线循环render
+  //   更新性能监视器
+  stats.update();
 
   // 这段代码必须放到最下面
   // render(场景，相机)

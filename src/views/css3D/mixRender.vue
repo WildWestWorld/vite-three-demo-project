@@ -5,6 +5,15 @@
 <script setup>
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls';
+
+import {
+  CSS3DRenderer,
+  CSS3DObject,
+} from 'three/examples/jsm/renderers/CSS3DRenderer';
+
+
+
 //引入调试器
 import { GUI } from 'three/examples/jsm/libs/lil-gui.module.min.js';
 
@@ -17,6 +26,9 @@ let dirLight;
 let ground;
 //环形结
 let tourusKnot;
+
+let renderer2;
+let scene2;
 
 // 场景
 const scene = ref(null);
@@ -101,6 +113,8 @@ const initScene = () => {
   scene.value = new THREE.Scene();
   //设置场景背景颜色
   scene.value.background = new THREE.Color(0xf0f0f0);
+
+  scene2 = new THREE.Scene();
 };
 
 //初始化坐标轴
@@ -159,6 +173,50 @@ const initCube = () => {
   //   cube.value.position.set(0, -1, 0);
   //  将创建好的物体放到我们创建的场景里面
   //   scene.value.add(cube.value);
+
+  const material = new THREE.MeshBasicMaterial({
+    color: 0x000000,
+    wireframe: true,
+    wireframeLinewidth: 5,
+    side: THREE.DoubleSide,
+  });
+  const position = new THREE.Vector3();
+  //   const rotation = new THREE.Vector3();
+  for (let i = 0; i < 10; i++) {
+    const geometry = new THREE.PlaneGeometry(100, 100);
+    position.set(
+      (Math.random() - 0.5) * 200,
+      (Math.random() - 0.5) * 200,
+      (Math.random() - 0.5) * 200
+    );
+    // rotation.set(Math.random(), Math.random(), Math.random());
+
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(position);
+    mesh.rotation.x = Math.random();
+    mesh.rotation.y = Math.random();
+    mesh.rotation.z = Math.random();
+
+    mesh.scale.set(Math.random() + 0.5, Math.random() + 0.5);
+
+    // mesh.rotation.copy(rotation);
+    scene.value.add(mesh);
+
+    const element = document.createElement('div');
+    element.style.width = '100px';
+    element.style.height = '100px';
+    element.style.background = new THREE.Color(
+      Math.random() * 0xffffff
+    ).getStyle();
+
+    element.style.opacity = i < 5 ? 0.5 : 1;
+
+    const object = new CSS3DObject(element);
+    object.position.copy(position);
+    object.rotation.copy(mesh.rotation);
+    object.scale.copy(mesh.scale);
+    scene2.add(object);
+  }
 };
 //初始化圆柱体
 const initCylinder = () => {
@@ -232,8 +290,8 @@ const initShadow = () => {
 const initRender = () => {
   // 3.创建render
   // 我们设置WebGL位置
-  renderer.value = new THREE.WebGLRenderer({antialias: true});
-  
+  renderer.value = new THREE.WebGLRenderer({ antialias: true });
+
   //开启渲染器中的阴影渲染
   renderer.value.shadowMap.enabled = true;
 
@@ -245,23 +303,49 @@ const initRender = () => {
 
   renderer.value.outputEncoding = THREE.sRGBEncoding;
 
+  // 3.创建render2
+  // 我们设置WebGL位置
+  renderer2 = new CSS3DRenderer();
+
+  //开启渲染器中的阴影渲染
+  //   renderer.value.shadowMap.enabled = true;
+
+  //设置像素比例，这样可以让他看起来更适合屏幕
+  //   renderer.value.setPixelRatio(window.devicePixelRatio);
+
+  // 设置渲染的大小
+  renderer2.setSize(window.innerWidth, window.innerHeight);
+  renderer2.domElement.style.position = 'absolute';
+  renderer2.domElement.style.top = 0;
+
   //   将渲染好的数据，放到document里面
   // renderer.value.domElement=我们渲染出来的数据(是一个canvas)
   //   document.body.appendChild(renderer.value.domElement);
   let threeContainer = document.querySelector('.three-container');
   threeContainer.appendChild(renderer.value.domElement);
+  threeContainer.appendChild(renderer2.domElement);
 };
 
 //初始化控制器
 const initController = () => {
   // 4.控制器
-  cameraController.value = new OrbitControls(
+  //   cameraController.value = new OrbitControls(
+  //     camera.value,
+  //     renderer.value.domElement
+  //   );
+
+  // cameraController.value = new TrackballControls(
+  //     camera.value,
+  //     renderer.value.domElement
+  //   );
+
+  cameraController.value = new TrackballControls(
     camera.value,
-    renderer.value.domElement
+    renderer2.domElement
   );
 
   //设置控制器变换的基础点
-  cameraController.value.target.set(0, 1, 0);
+  //   cameraController.value.target.set(0, 1, 0);
 };
 
 //初始化图形参数控制器
@@ -324,7 +408,11 @@ const render = () => {
 
   // 这段代码必须放到最下面
   // render(场景，相机)
+  cameraController.value.update();
+
+
   toRaw(renderer.value).render(toRaw(scene.value), toRaw(camera.value));
+  renderer2.render(scene2, toRaw(camera.value));
 
   requestAnimationFrame(render);
 };
@@ -336,6 +424,7 @@ window.addEventListener('resize', function () {
   camera.value.updateProjectionMatrix();
   //调整页面的大小
   renderer.value.setSize(window.innerWidth, window.innerHeight);
+  renderer2.setSize(window.innerWidth, window.innerHeight);
 });
 </script>
 

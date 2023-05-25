@@ -50,6 +50,14 @@ const routes = [
         name: 'clipping',
         component: () => import("@/views/clipping/clipping.vue")
     }, {
+        path: '/clippingHigh',
+        name: 'clippingHigh',
+        component: () => import("@/views/clipping/clippingHigh.vue")
+    }, {
+        path: '/clipIntersection',
+        name: 'clipIntersection',
+        component: () => import("@/views/clipping/clipIntersection.vue")
+    }, {
         path: '/skybox',
         name: 'skybox',
         component: () => import("@/views/skybox/Skybox.vue")
@@ -121,6 +129,10 @@ const routes = [
         path: '/ammoBullet',
         name: 'ammoBullet',
         component: () => import("@/views/ammo/ammoBullet.vue")
+    }, {
+        path: '/ammoSoft',
+        name: 'ammoSoft',
+        component: () => import("@/views/ammo/ammoSoft.vue")
     }, {
         path: '/vector',
         name: 'vector',
@@ -221,7 +233,68 @@ const routes = [
         path: '/css3D',
         name: 'css3D',
         component: () => import("@/views/css3D/css3D.vue")
+    }, {
+        path: '/mixRender',
+        name: 'mixRender',
+        component: () => import("@/views/css3D/mixRender.vue")
+    }, {
+        path: '/tween',
+        name: 'tween',
+        component: () => import("@/views/css3D/tween.vue")
+    }, {
+        path: '/elementCircle',
+        name: 'elementCircle',
+        component: () => import("@/views/css3D/elementCircle.vue")
+    }, {
+        path: '/mCamera',
+        name: 'mCamera',
+        component: () => import("@/views/camera/mCamera.vue")
+    }, {
+        path: '/arrayCamera',
+        name: 'arrayCamera',
+        component: () => import("@/views/camera/arrayCamera.vue")
+    }, {
+        path: '/stereo',
+        name: 'stereo',
+        component: () => import("@/views/stereo/stereo.vue")
+    }, {
+        path: '/probe',
+        name: 'probe',
+        component: () => import("@/views/probe/probe.vue")
+    }, {
+        path: '/cubeCamera',
+        name: 'cubeCamera',
+        component: () => import("@/views/camera/cubeCamera.vue")
+    }, {
+        path: '/cubeCameraProbe',
+        name: 'cubeCameraProbe',
+        component: () => import("@/views/camera/cubeCameraProbe.vue")
+    }, {
+        path: '/line',
+        name: 'line',
+        component: () => import("@/views/line/line.vue")
+    }, {
+        path: '/dashLine',
+        name: 'dashLine',
+        component: () => import("@/views/line/dashLine.vue")
     },
+    {
+        path: '/lineWidth',
+        name: 'lineWidth',
+        component: () => import("@/views/line/lineWidth.vue")
+    }, {
+        path: '/OGod',
+        name: 'OGod',
+        component: () => import("@/views/OGod/OGod.vue")
+    }, {
+        path: '/travelDemo',
+        name: 'travelDemo',
+        component: () => import("@/views/travel/demo.vue")
+    },
+
+
+
+
 
 
 

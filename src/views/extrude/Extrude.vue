@@ -368,6 +368,8 @@ const initGUI = () => {
 const render = () => {
   cameraController.value.update();
 
+  
+
   // render(场景，相机)
   toRaw(renderer.value).render(toRaw(scene.value), toRaw(camera.value));
   //   创建的cube进行旋转

@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
+
 import { onMounted, reactive, ref, toRaw } from 'vue';
 // 变量区
 
@@ -90,6 +91,9 @@ const init = () => {
     camera.value,
     renderer.value.domElement
   );
+
+
+  document.body.appendChild(statsDom);
 };
 // 渲染
 const render = () => {

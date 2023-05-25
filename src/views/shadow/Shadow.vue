@@ -5,7 +5,8 @@
 <script setup>
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-
+// 性能监视器
+import Stats from 'three/examples/jsm/libs/stats.module';
 import { onMounted, reactive, ref, toRaw } from 'vue';
 // 变量区
 
@@ -21,6 +22,8 @@ const cameraControler = ref(null);
 const renderer = ref(null);
 // 坐标轴
 const axisHelp = ref(null);
+
+let stats;
 
 // 生命周期区
 onMounted(() => {
@@ -91,14 +94,20 @@ const init = () => {
     camera.value,
     renderer.value.domElement
   );
+
+
 };
 // 渲染
 const render = () => {
   // render(场景，相机)
-  toRaw(renderer.value).render(toRaw(scene.value), toRaw(camera.value));
   //   创建的cube进行旋转
   toRaw(cube.value).rotation.y = toRaw(cube.value).rotation.y + 0.01;
   //requestAnimationFrame来自浏览器 就是一旦有空闲就会再次调用里面放的函数
+
+  stats.update();
+
+  toRaw(renderer.value).render(toRaw(scene.value), toRaw(camera.value));
+
   //   相当于无线循环render
   requestAnimationFrame(render);
 };
