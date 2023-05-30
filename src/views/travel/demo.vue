@@ -27,7 +27,8 @@ let dirLight;
 let ground;
 //环形结
 let tourusKnot;
-
+//   判断此次鼠标事件是否是变换事件
+let transing = false;
 let wall;
 
 // 性能监视器
@@ -614,9 +615,6 @@ const initController = () => {
   transformControls.attach(target);
   scene.value.add(transformControls);
   scene.value.add(target);
-
-  //   判断此次鼠标事件是否是变换事件
-  const transing = false;
 
   transformControls.addEventListener('mousedown', (event) => {
     console.log('mousedown');

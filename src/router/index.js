@@ -290,14 +290,51 @@ const routes = [
         path: '/travelDemo',
         name: 'travelDemo',
         component: () => import("@/views/travel/demo.vue")
+    }, {
+        path: '/VRSeeRoom',
+        name: 'VRSeeRoom',
+        component: () => import("@/views/VRSeeRoom/VRSeeRoom.vue")
+    }, {
+        path: '/island',
+        name: 'island',
+        component: () => import("@/views/island/Island.vue")
+    }, {
+        path: '/showCar',
+        name: 'showCar',
+        component: () => import("@/views/showCar/showCar.vue")
+    }, {
+        path: '/showCar',
+        name: 'showCar',
+        component: () => import("@/views/showCar/showCar.vue")
+    }, {
+        path: '/robot',
+        name: 'robot',
+        component: () => import("@/views/robot/Robot.vue")
+    }, {
+        path: '/earth',
+        name: 'earth',
+        component: () => import("@/views/earth/earth.vue")
+    }, {
+        path: '/football',
+        name: 'football',
+        component: () => import("@/views/game/football.vue")
+    }, {
+        path: '/picture3D',
+        name: 'picture3D',
+        component: () => import("@/views/css3D/picture3D.vue")
+    }, {
+        path: '/kirby',
+        name: 'kirby',
+        component: () => import("@/views/kirby/kirby.vue")
+    }, {
+        path: '/scrollPage',
+        name: 'scrollPage',
+        component: () => import("@/views/scrollPage/scrollPage.vue")
+    },{
+        path: '/shadowMaterial',
+        name: 'shadowMaterial',
+        component: () => import("@/views/shadowMaterial/shadowMaterial.vue")
     },
-
-
-
-
-
-
-
 
 
 
